@@ -2,7 +2,7 @@
 
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Plus, FileText, LogIn } from "lucide-react"
+import { Plus, LogIn, Wrench } from "lucide-react"
 import confetti from "canvas-confetti"
 import { ConfettiButton } from "@/components/ui/confetti"
 
@@ -12,14 +12,14 @@ export default function Home() {
   useEffect(() => {
     window.scrollTo(0, document.body.scrollHeight)
     
-    const handleScroll = (e) => {
+    const handleScroll = (e: Event) => {
       if (window.scrollY < document.body.scrollHeight - window.innerHeight) {
         e.preventDefault()
         window.scrollTo(0, document.body.scrollHeight)
       }
     }
     
-    const handleWheel = (e) => {
+    const handleWheel = (e: WheelEvent) => {
       if (e.deltaY < 0) { // Scrolling up
         e.preventDefault()
         window.scrollTo(0, document.body.scrollHeight)
@@ -35,16 +35,9 @@ export default function Home() {
     }
   }, [])
 
-  const handleCreateFormClick = () => {
-    confetti({
-      particleCount: 100,
-      spread: 70,
-      origin: { y: 0.6 }
-    })
-    // Navigate to /form after confetti animation
-    setTimeout(() => {
-      router.push('/form')
-    }, 1000)
+
+  const handleFormBuilderClick = () => {
+    router.push('/builder')
   }
 
   const handleLoginClick = () => {
@@ -53,21 +46,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <nav className="bg-gray-900 rounded-lg mx-4 mt-4 px-6 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-8">
-          <span className="text-white font-semibold">Home</span>
-          <span className="text-gray-300 hover:text-white cursor-pointer flex items-center gap-2" onClick={handleCreateFormClick}>
-            <FileText size={16} />
-            Create Form
-          </span>
-        </div>
-        <button className="text-white hover:text-gray-300 flex items-center gap-2" onClick={handleLoginClick}>
-          <LogIn size={16} />
-          Login
-        </button>
-      </nav>
-
-      <div className="flex items-center justify-center h-[calc(100vh-80px)]">
+      <div className="flex items-center justify-center h-screen">
         <div className="text-center flex flex-col items-center justify-center">
           <h1 className="text-6xl font-bold mb-8">Formed</h1>
           <p className="text-xl mb-8">Forms, Done Right.</p>
@@ -75,7 +54,7 @@ export default function Home() {
             className="bg-white text-black hover:bg-gray-200 flex items-center justify-center gap-2"
             onClick={() => {
               setTimeout(() => {
-                router.push('/form')
+                router.push('/builder')
               }, 1000)
             }}
           >

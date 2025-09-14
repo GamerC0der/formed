@@ -40,21 +40,17 @@ const Confetti = forwardRef<ConfettiRef, Props>((props, ref) => {
     children,
     ...rest
   } = props
-  const instanceRef = useRef<ConfettiInstance | null>(null) // confetti instance
+  const instanceRef = useRef<ConfettiInstance | null>(null)
 
   const canvasRef = useCallback(
-    // https://react.dev/reference/react-dom/components/common#ref-callback
-    // https://reactjs.org/docs/refs-and-the-dom.html#callback-refs
     (node: HTMLCanvasElement) => {
       if (node !== null) {
-        // <canvas> is mounted => create the confetti instance
-        if (instanceRef.current) return // if not already created
+        if (instanceRef.current) return 
         instanceRef.current = confetti.create(node, {
           ...globalOptions,
           resize: true,
         })
       } else {
-        // <canvas> is unmounted => reset and destroy instanceRef
         if (instanceRef.current) {
           instanceRef.current.reset()
           instanceRef.current = null
@@ -64,7 +60,6 @@ const Confetti = forwardRef<ConfettiRef, Props>((props, ref) => {
     [globalOptions],
   )
 
-  // `fire` is a function that calls the instance() with `opts` merged with `options`
   const fire = useCallback(
     (opts = {}) => instanceRef.current?.({ ...options, ...opts }),
     [options],
