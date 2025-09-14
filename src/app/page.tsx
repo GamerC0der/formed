@@ -20,7 +20,7 @@ export default function Home() {
     }
     
     const handleWheel = (e: WheelEvent) => {
-      if (e.deltaY < 0) { // Scrolling up
+      if (e.deltaY < 0) { 
         e.preventDefault()
         window.scrollTo(0, document.body.scrollHeight)
       }
@@ -44,9 +44,46 @@ export default function Home() {
     router.push('/login')
   }
 
+  const handleDemoClick = () => {
+    const demoData = {
+      formName: "Contact Form Demo",
+      formComponents: [
+        {
+          id: "1",
+          type: "text",
+          label: "Name",
+          placeholder: "Enter your name...",
+          required: true
+        },
+        {
+          id: "2", 
+          type: "email",
+          label: "Email",
+          placeholder: "Enter your email...",
+          required: true
+        },
+        {
+          id: "3",
+          type: "select",
+          label: "Subject",
+          options: ["General Inquiry", "Support", "Sales", "Other"]
+        },
+        {
+          id: "4",
+          type: "textarea", 
+          label: "Message",
+          placeholder: "Enter your message...",
+          required: true
+        }
+      ]
+    }
+    document.cookie = `formData=${encodeURIComponent(JSON.stringify(demoData))}; path=/`
+    router.push('/form')
+  }
+
   return (
-    <div className="min-h-screen bg-black text-white">
-      <div className="flex items-center justify-center h-screen">
+    <div className="min-h-screen bg-black text-white flex flex-col">
+      <div className="flex items-center justify-center flex-1">
         <div className="text-center flex flex-col items-center justify-center">
           <h1 className="text-6xl font-bold mb-8">Formed</h1>
           <p className="text-xl mb-8">Forms, Done Right.</p>
@@ -61,8 +98,23 @@ export default function Home() {
             <Plus size={16} />
             Create Form
           </ConfettiButton>
+          <a 
+            href="/form" 
+            onClick={handleDemoClick}
+            className="text-gray-400 hover:text-white underline mt-4"
+          >
+            Try Demo
+          </a>
         </div>
       </div>
+      
+      <footer className="bg-gray-900 border-t border-gray-800 py-6">
+        <div className="max-w-6xl mx-auto px-6 text-center">
+          <p className="text-gray-400 text-sm">
+            © {new Date().getFullYear()} Formed
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }

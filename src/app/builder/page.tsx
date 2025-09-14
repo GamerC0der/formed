@@ -7,11 +7,8 @@ import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-ki
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { 
-  Plus, 
   Type, 
   Sliders, 
-  Link, 
-  Minus, 
   Settings, 
   Trash2, 
   ChevronUp, 
@@ -25,13 +22,19 @@ import {
   CheckSquare,
   Radio,
   AlignCenter,
-  LogIn
+  Calendar,
+  Clock,
+  Link,
+  Star,
+  Monitor,
+  Sparkles,
 } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Rating } from "@/components/ui/rating"
 
 interface FormComponent {
   id: string
-  type: "text" | "email" | "number" | "textarea" | "select" | "checkbox" | "radio" | "slider" | "divider"
+  type: "text" | "email" | "number" | "textarea" | "select" | "checkbox" | "radio" | "slider" | "divider" | "date" | "time" | "url" | "rating" | "iframe"
   label: string
   placeholder?: string
   required?: boolean
@@ -42,6 +45,10 @@ interface FormComponent {
   allowedDomains?: string[]
   comment?: string
   disallowDecimals?: boolean
+  allowHalf?: boolean
+  src?: string
+  width?: string
+  height?: string
 }
 
 interface DraggableComponent {
@@ -61,6 +68,11 @@ const draggableComponents: DraggableComponent[] = [
   { id: "radio", type: "radio", label: "Radio", icon: Radio },
   { id: "slider", type: "slider", label: "Slider", icon: Sliders },
   { id: "divider", type: "divider", label: "Divider", icon: AlignCenter },
+  { id: "date", type: "date", label: "Date", icon: Calendar },
+  { id: "time", type: "time", label: "Time", icon: Clock },
+  { id: "url", type: "url", label: "URL", icon: Link },
+  { id: "rating", type: "rating", label: "Rating", icon: Star },
+  { id: "iframe", type: "iframe", label: "Iframe", icon: Monitor },
 ]
 
 function generateUUID(): string {
@@ -225,6 +237,11 @@ function FormComponentItem({
                 {component.comment}
               </div>
             )}
+            {component.disallowDecimals && (
+              <div className="text-xs text-gray-400">
+                Only whole numbers allowed
+              </div>
+            )}
           </div>
         )}
 
@@ -256,9 +273,13 @@ function FormComponentItem({
         )}
 
         {component.type === "checkbox" && (
-          <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-800/50 transition-colors">
-            <Checkbox disabled />
-            <span className="text-gray-300 text-sm">Checkbox option</span>
+          <div className="space-y-3">
+            {component.options?.map((option, index) => (
+              <div key={index} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-800/50 transition-colors">
+                <Checkbox disabled />
+                <span className="text-gray-300 text-sm">{option}</span>
+              </div>
+            ))}
           </div>
         )}
 
@@ -307,6 +328,120 @@ function FormComponentItem({
             <div className="flex-1 h-px bg-gray-600"></div>
           </div>
         )}
+
+        {component.type === "date" && (
+          <div className="space-y-2">
+            <input
+              type="date"
+              className="w-full bg-gray-800 text-white border border-gray-700 rounded-md px-3 py-2 focus:outline-none focus:border-white"
+              disabled
+            />
+            {component.comment && (
+              <div className="text-xs text-gray-400 italic">
+                {component.comment}
+              </div>
+            )}
+          </div>
+        )}
+
+        {component.type === "time" && (
+          <div className="space-y-2">
+            <input
+              type="time"
+              className="w-full bg-gray-800 text-white border border-gray-700 rounded-md px-3 py-2 focus:outline-none focus:border-white"
+              disabled
+            />
+            {component.comment && (
+              <div className="text-xs text-gray-400 italic">
+                {component.comment}
+              </div>
+            )}
+          </div>
+        )}
+
+        {component.type === "url" && (
+          <div className="space-y-2">
+            <input
+              type="url"
+              placeholder={component.placeholder || "https://example.com"}
+              className="w-full bg-gray-800 text-white border border-gray-700 rounded-md px-3 py-2 focus:outline-none focus:border-white"
+              disabled
+            />
+            {component.comment && (
+              <div className="text-xs text-gray-400 italic">
+                {component.comment}
+              </div>
+            )}
+          </div>
+        )}
+
+
+        {component.type === "rating" && (
+          <div className="space-y-2">
+            <Rating
+              value={component.value || 0}
+              allowHalf={component.allowHalf}
+              onChange={(value) => {
+                setFormComponents(items =>
+                  items.map(item =>
+                    item.id === component.id
+                      ? { ...item, value }
+                      : item
+                  )
+                )
+              }}
+            />
+            {component.comment && (
+              <div className="text-xs text-gray-400 italic">
+                {component.comment}
+              </div>
+            )}
+          </div>
+        )}
+
+        {component.type === "iframe" && (
+          <div className="space-y-2">
+            {component.src ? (
+              <div className="relative">
+                <iframe 
+                  src={component.src} 
+                  width={component.width || "100%"} 
+                  height={component.height || "400px"} 
+                  className="w-full border border-gray-700 rounded-md shadow-sm"
+                  title={component.label}
+                  loading="lazy"
+                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                  onLoad={(e) => {
+                    const iframe = e.target as HTMLIFrameElement
+                    const errorDiv = iframe.nextElementSibling as HTMLElement
+                    if (errorDiv) errorDiv.style.display = 'none'
+                    iframe.style.display = 'block'
+                  }}
+                />
+                <div 
+                  className="absolute inset-0 bg-gray-800 border border-gray-700 rounded-md shadow-sm items-center justify-center flex"
+                >
+                  <div className="text-center">
+                    <Monitor className="mx-auto h-8 w-8 text-red-400 mb-2" />
+                    <p className="text-red-400 text-sm font-medium">Refused to connect</p>
+                    <p className="text-gray-500 text-xs mt-1">The website blocked this iframe</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="border-2 border-dashed border-gray-600 rounded-lg p-6 text-center hover:border-gray-500 transition-colors">
+                <Monitor className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+                <p className="text-gray-400 text-sm">Iframe Preview</p>
+                <p className="text-gray-500 text-xs mt-1">Add a URL in the properties panel</p>
+              </div>
+            )}
+            {component.comment && (
+              <div className="text-xs text-gray-400 italic">
+                {component.comment}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
@@ -321,10 +456,78 @@ export default function FormBuilder() {
   const [isMounted, setIsMounted] = useState(false)
   const [componentSearch, setComponentSearch] = useState("")
   const [showPublishModal, setShowPublishModal] = useState(false)
+  const [publishedForms, setPublishedForms] = useState<any[]>([])
+  const [showFormsBar, setShowFormsBar] = useState(false)
+  const [showAIModal, setShowAIModal] = useState(false)
+  const [aiPrompt, setAiPrompt] = useState("")
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [sessionId, setSessionId] = useState<string>('')
+  const [showCopyAlert, setShowCopyAlert] = useState(false)
 
   useEffect(() => {
     setIsMounted(true)
+    initializeSession()
   }, [])
+
+  const initializeSession = async () => {
+    try {
+      let storedSessionId = localStorage.getItem('formBuilderSessionId')
+      
+      if (!storedSessionId) {
+        const response = await fetch('/api/session')
+        if (response.ok) {
+          const { sessionId: newSessionId } = await response.json()
+          storedSessionId = newSessionId
+          localStorage.setItem('formBuilderSessionId', newSessionId)
+        }
+      }
+      
+      if (storedSessionId) {
+        setSessionId(storedSessionId)
+        fetchPublishedForms(storedSessionId)
+      }
+    } catch (error) {
+      console.error('Error initializing session:', error)
+    }
+  }
+
+  const fetchPublishedForms = async (sessionIdToUse?: string) => {
+    try {
+      const currentSessionId = sessionIdToUse || sessionId
+      if (!currentSessionId) return
+      
+      const response = await fetch('/api/forms', {
+        headers: {
+          'X-Session-ID': currentSessionId
+        }
+      })
+      if (response.ok) {
+        const forms = await response.json()
+        setPublishedForms(forms)
+        if (forms.length > 0) {
+          setShowFormsBar(true)
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching forms:', error)
+    }
+  }
+
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault()
+        handlePreview()
+      }
+      if (e.key === 'p' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault()
+        setShowPublishModal(true)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [formComponents])
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string)
@@ -344,7 +547,7 @@ export default function FormBuilder() {
           label: componentType.label,
           placeholder: `Enter ${componentType.label.toLowerCase()}...`,
           required: false,
-          options: componentType.type === "select" || componentType.type === "radio" 
+          options: componentType.type === "select" || componentType.type === "radio" || componentType.type === "checkbox"
             ? ["Option 1", "Option 2", "Option 3"] 
             : undefined,
           min: componentType.type === "slider" ? 0 : undefined,
@@ -408,15 +611,139 @@ export default function FormBuilder() {
     }
   }
 
+  const generateFormWithAI = async (prompt: string) => {
+    setIsGenerating(true)
+    try {
+      const systemPrompt = `You are a form builder AI. Generate a JSON response with form components based on the user's description.
+
+Available component types: text, email, number, textarea, select, checkbox, radio, slider, divider, date, time, url, rating, iframe
+
+Each component should have:
+- id: unique string
+- type: one of the available types
+- label: descriptive label
+- placeholder: optional placeholder text
+- required: boolean
+- options: array of strings (for select, radio, checkbox)
+- min/max: numbers (for number, slider)
+- allowHalf: boolean (for rating)
+- src/width/height: strings (for iframe)
+
+Return only valid JSON in this format:
+{
+  "components": [
+    {
+      "id": "unique-id",
+      "type": "component-type",
+      "label": "Component Label",
+      "placeholder": "Optional placeholder",
+      "required": true/false,
+      "options": ["option1", "option2"]
+    }
+  ]
+}`
+
+      const response = await fetch('https://ai.hackclub.com/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'moonshotai/kimi-k2-instruct-0905',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: prompt }
+          ],
+          temperature: 0.7,
+          max_tokens: 2000
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to generate form, sorry...')
+      }
+
+      const data = await response.json()
+      const aiResponse = data.choices[0].message.content
+      
+      let jsonString = aiResponse
+      const jsonMatch = aiResponse.match(/```(?:json)?\s*([\s\S]*?)\s*```/)
+      if (jsonMatch) {
+        jsonString = jsonMatch[1]
+      }
+      const parsedResponse = JSON.parse(jsonString)
+      const generatedComponents = parsedResponse.components || []
+
+      const newComponents: FormComponent[] = generatedComponents.map((comp: any) => ({
+        id: comp.id || generateUUID(),
+        type: comp.type,
+        label: comp.label || 'Untitled',
+        placeholder: comp.placeholder,
+        required: comp.required || false,
+        options: comp.options,
+        min: comp.min,
+        max: comp.max,
+        allowHalf: comp.allowHalf,
+        src: comp.src,
+        width: comp.width,
+        height: comp.height
+      }))
+
+      setFormComponents([])
+      for (let i = 0; i < newComponents.length; i++) {
+        await new Promise(resolve => setTimeout(resolve, 300))
+        setFormComponents(prev => [...prev, newComponents[i]])
+      }
+
+      setShowAIModal(false)
+      setAiPrompt("")
+    } catch (error) {
+      console.error('Error generating form:', error)
+      alert('Failed to generate form. Please try again.')
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
   const selectedComponentData = formComponents.find(c => c.id === selectedComponent)
   
   const filteredComponents = draggableComponents.filter(component =>
     component.label.toLowerCase().includes(componentSearch.toLowerCase())
   )
 
-  const handlePublish = () => {
-    console.log("Publishing form:", { formName, formComponents })
-    setShowPublishModal(false)
+  const handlePublish = async () => {
+    if (formComponents.length === 0) {
+      alert('Please add at least one component to your form before publishing.')
+      return
+    }
+    
+    try {
+      console.log('Publishing form:', { formName, formComponents })
+      const response = await fetch('/api/forms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ formName, formComponents, sessionId })
+      })
+      
+      if (response.ok) {
+        const { url } = await response.json()
+        console.log("Form published at:", url)
+        window.open(url, '_blank')
+        setShowPublishModal(false)
+        fetchPublishedForms()
+      } else {
+        console.error('Failed to publish form')
+      }
+    } catch (error) {
+      console.error('Error publishing form:', error)
+    }
+  }
+
+  const handlePreview = () => {
+    if (formComponents.length === 0) return
+    const data = { formName, formComponents }
+    document.cookie = `formData=${encodeURIComponent(JSON.stringify(data))}; path=/`
+    window.open('/form', '_blank')
   }
 
   if (!isMounted) {
@@ -437,12 +764,21 @@ export default function FormBuilder() {
           <ArrowLeft size={16} />
           Back
         </button>
-        <button 
-          onClick={() => setShowPublishModal(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
-        >
-          Publish
-        </button>
+        <div className="flex gap-2">
+          <button 
+            onClick={handlePreview}
+            disabled={formComponents.length === 0}
+            className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Preview
+          </button>
+          <button 
+            onClick={() => setShowPublishModal(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+          >
+            Publish
+          </button>
+        </div>
       </nav>
 
       <DndContext
@@ -483,6 +819,16 @@ export default function FormBuilder() {
                     <div className="bg-gray-900 rounded-lg p-8 text-center border-2 border-dashed border-gray-700">
                       <p className="text-gray-400 text-lg">No components yet</p>
                       <p className="text-gray-500 text-sm mt-2">Drag components from the left panel to build your form</p>
+                      
+                      <div className="mt-6">
+                        <button
+                          onClick={() => setShowAIModal(true)}
+                          className="inline-flex items-center gap-2 text-purple-400 hover:text-purple-300 transition-colors"
+                        >
+                          <Sparkles className="h-4 w-4" />
+                          <span>Start with AI</span>
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     formComponents.map((component, index) => (
@@ -566,9 +912,9 @@ export default function FormBuilder() {
                   </div>
                 )}
 
-                {(selectedComponentData.type === "select" || selectedComponentData.type === "radio") && (
+                {(selectedComponentData.type === "select" || selectedComponentData.type === "radio" || selectedComponentData.type === "checkbox") && (
                   <div>
-                    <label className="block text-sm text-gray-300 mb-2">Options</label>
+                    <label className="block text-sm text-gray-300 mb-2">Options ({selectedComponentData.options?.length || 0} of 5)</label>
                     <div className="space-y-2">
                       {selectedComponentData.options?.map((option, index) => (
                         <div key={index} className="flex gap-2">
@@ -615,19 +961,22 @@ export default function FormBuilder() {
                       <button
                         onClick={() => {
                           const currentOptions = selectedComponentData.options || []
-                          const newOptionNumber = currentOptions.length + 1
-                          const newOptions = [...currentOptions, `Option ${newOptionNumber}`]
-                          setFormComponents(items =>
-                            items.map(item =>
-                              item.id === selectedComponent
-                                ? { ...item, options: newOptions }
-                                : item
+                          if (currentOptions.length < 5) {
+                            const newOptionNumber = currentOptions.length + 1
+                            const newOptions = [...currentOptions, `Option ${newOptionNumber}`]
+                            setFormComponents(items =>
+                              items.map(item =>
+                                item.id === selectedComponent
+                                  ? { ...item, options: newOptions }
+                                  : item
+                              )
                             )
-                          )
+                          }
                         }}
-                        className="w-full py-2 text-gray-400 hover:text-white border border-gray-700 rounded-md hover:border-gray-600 transition-colors"
+                        disabled={(selectedComponentData.options || []).length >= 5}
+                        className="w-full py-2 text-gray-400 hover:text-white border border-gray-700 rounded-md hover:border-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-gray-400 disabled:hover:border-gray-700"
                       >
-                        Add Option
+                        Add Option {(selectedComponentData.options || []).length >= 5 ? "(Max 5)" : ""}
                       </button>
                     </div>
                   </div>
@@ -787,6 +1136,113 @@ export default function FormBuilder() {
                   </div>
                 )}
 
+                {selectedComponentData.type === "rating" && (
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => {
+                        setFormComponents(items =>
+                          items.map(item =>
+                            item.id === selectedComponent
+                              ? { ...item, allowHalf: !item.allowHalf }
+                              : item
+                          )
+                        )
+                      }}
+                      className={`relative w-5 h-5 rounded border-2 transition-all duration-200 ${
+                        selectedComponentData.allowHalf
+                          ? 'bg-cyan-600 border-cyan-600'
+                          : 'bg-transparent border-gray-500 hover:border-gray-400'
+                      }`}
+                    >
+                      {selectedComponentData.allowHalf && (
+                        <svg
+                          className="absolute inset-0 w-3 h-3 m-auto text-white"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                      )}
+                    </button>
+                    <label className="text-sm text-gray-300 cursor-pointer" onClick={() => {
+                      setFormComponents(items =>
+                        items.map(item =>
+                          item.id === selectedComponent
+                            ? { ...item, allowHalf: !item.allowHalf }
+                            : item
+                        )
+                      )
+                    }}>
+                      Allow half stars
+                    </label>
+                  </div>
+                )}
+
+                {selectedComponentData.type === "iframe" && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm text-gray-300 mb-2">Source URL</label>
+                      <input
+                        type="url"
+                        value={selectedComponentData.src || ""}
+                        onChange={(e) => {
+                          setFormComponents(items =>
+                            items.map(item =>
+                              item.id === selectedComponent
+                                ? { ...item, src: e.target.value }
+                                : item
+                            )
+                          )
+                        }}
+                        className="w-full bg-gray-800 text-white border border-gray-700 rounded-md px-3 py-2 focus:outline-none focus:border-white"
+                        placeholder="https://example.com"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm text-gray-300 mb-2">Width</label>
+                        <input
+                          type="text"
+                          value={selectedComponentData.width || "100%"}
+                          onChange={(e) => {
+                            setFormComponents(items =>
+                              items.map(item =>
+                                item.id === selectedComponent
+                                  ? { ...item, width: e.target.value }
+                                  : item
+                              )
+                            )
+                          }}
+                          className="w-full bg-gray-800 text-white border border-gray-700 rounded-md px-3 py-2 focus:outline-none focus:border-white"
+                          placeholder="100%"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-gray-300 mb-2">Height</label>
+                        <input
+                          type="text"
+                          value={selectedComponentData.height || "400px"}
+                          onChange={(e) => {
+                            setFormComponents(items =>
+                              items.map(item =>
+                                item.id === selectedComponent
+                                  ? { ...item, height: e.target.value }
+                                  : item
+                              )
+                            )
+                          }}
+                          className="w-full bg-gray-800 text-white border border-gray-700 rounded-md px-3 py-2 focus:outline-none focus:border-white"
+                          placeholder="400px"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex items-center gap-3">
                   <Checkbox
                     checked={selectedComponentData.required}
@@ -834,8 +1290,14 @@ export default function FormBuilder() {
       </DndContext>
 
       {showPublishModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-900 rounded-lg p-6 max-w-md w-full mx-4 border border-gray-700">
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          onClick={() => setShowPublishModal(false)}
+        >
+          <div 
+            className="bg-gray-900 rounded-lg p-6 max-w-md w-full mx-4 border border-gray-700"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h3 className="text-white text-lg font-semibold mb-4">Publish Form</h3>
             <p className="text-gray-300 mb-6">
               Are you sure you want to publish "{formName || 'Untitled Form'}"? 
@@ -858,6 +1320,330 @@ export default function FormBuilder() {
           </div>
         </div>
       )}
+
+      <div className="fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-700 z-40">
+        <div className="flex items-center justify-between px-4 py-2">
+          <button
+            onClick={() => setShowFormsBar(!showFormsBar)}
+            className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors"
+          >
+            <span className="text-sm font-medium">
+              Published Forms ({publishedForms.length})
+            </span>
+            <svg 
+              className={`w-4 h-4 transition-transform ${showFormsBar ? 'rotate-180' : ''}`}
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          <button
+            onClick={() => fetchPublishedForms()}
+            className="text-gray-400 hover:text-white transition-colors"
+            title="Refresh forms"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </button>
+        </div>
+        
+        {showFormsBar && (
+          <div className="max-h-48 overflow-y-auto border-t border-gray-700">
+            <div className="p-4">
+              {publishedForms.length === 0 ? (
+                <p className="text-gray-400 text-sm text-center py-4">No published forms yet</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {publishedForms.map((form) => (
+                    <div key={form.uuid} className="bg-gray-800 rounded-lg p-3 border border-gray-700">
+                      <div className="flex items-start justify-between mb-2">
+                        <h4 className="text-white font-medium text-sm truncate">
+                          {form.name || 'Untitled Form'}
+                        </h4>
+                        <span className="text-xs text-gray-400 ml-2">
+                          {form.submissions?.length || 0} submissions
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-400 mb-3">
+                        {new Date(form.createdAt).toLocaleDateString()}
+                      </p>
+                      <div className="flex gap-2">
+                        <a
+                          href={`/f/${form.uuid}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1 rounded transition-colors text-center"
+                        >
+                          View
+                        </a>
+                        {form.submissions && form.submissions.length > 0 && (
+                          <button
+                            onClick={() => {
+                              const submissionsWindow = window.open('', '_blank', 'width=800,height=600')
+                              if (submissionsWindow) {
+                                const firstThreeSubmissions = form.submissions.slice(0, 3)
+                                const html = `
+                                  <!DOCTYPE html>
+                                  <html>
+                                  <head>
+                                    <title>Submissions for ${form.name || 'Untitled Form'}</title>
+                                    <style>
+                                      body { 
+                                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                                        background: #111827; 
+                                        color: white; 
+                                        margin: 0; 
+                                        padding: 20px; 
+                                      }
+                                      .submission { 
+                                        background: #1f2937; 
+                                        border: 1px solid #374151; 
+                                        border-radius: 8px; 
+                                        padding: 20px; 
+                                        margin-bottom: 20px; 
+                                      }
+                                      .submission-header { 
+                                        display: flex; 
+                                        justify-content: space-between; 
+                                        align-items: center; 
+                                        margin-bottom: 15px; 
+                                      }
+                                      .submission-title { 
+                                        font-weight: 600; 
+                                        font-size: 18px; 
+                                      }
+                                      .submission-date { 
+                                        color: #9ca3af; 
+                                        font-size: 14px; 
+                                      }
+                                      .form-field { 
+                                        margin-bottom: 15px; 
+                                      }
+                                      .field-label { 
+                                        font-weight: 500; 
+                                        margin-bottom: 5px; 
+                                        display: block; 
+                                      }
+                                      .field-value { 
+                                        background: #374151; 
+                                        border: 1px solid #4b5563; 
+                                        border-radius: 4px; 
+                                        padding: 8px 12px; 
+                                        color: #e5e7eb; 
+                                      }
+                                      .checkbox-option, .radio-option { 
+                                        display: flex; 
+                                        align-items: center; 
+                                        gap: 8px; 
+                                        margin-bottom: 5px; 
+                                      }
+                                      .checkbox-option input, .radio-option input { 
+                                        margin: 0; 
+                                      }
+                                    </style>
+                                  </head>
+                                  <body>
+                                    <h1>Submissions for "${form.name || 'Untitled Form'}"</h1>
+                                    ${firstThreeSubmissions.map((submission: any, index: number) => `
+                                      <div class="submission">
+                                        <div class="submission-header">
+                                          <div class="submission-title">Submission #${index + 1}</div>
+                                          <div class="submission-date">${new Date(submission.createdAt).toLocaleString()}</div>
+                                        </div>
+                                        ${form.content?.formComponents?.map((component: any) => {
+                                          const value = submission.data[component.id] || ''
+                                          switch (component.type) {
+                                            case 'text':
+                                            case 'email':
+                                            case 'number':
+                                              return `
+                                                <div class="form-field">
+                                                  <label class="field-label">${component.label}</label>
+                                                  <div class="field-value">${value}</div>
+                                                </div>
+                                              `
+                                            case 'textarea':
+                                              return `
+                                                <div class="form-field">
+                                                  <label class="field-label">${component.label}</label>
+                                                  <div class="field-value">${value}</div>
+                                                </div>
+                                              `
+                                            case 'select':
+                                              return `
+                                                <div class="form-field">
+                                                  <label class="field-label">${component.label}</label>
+                                                  <div class="field-value">${value || 'No selection'}</div>
+                                                </div>
+                                              `
+                                            case 'radio':
+                                              return `
+                                                <div class="form-field">
+                                                  <label class="field-label">${component.label}</label>
+                                                  ${component.options?.map((option: string) => `
+                                                    <div class="radio-option">
+                                                      <input type="radio" ${value === option ? 'checked' : ''} disabled>
+                                                      <span>${option}</span>
+                                                    </div>
+                                                  `).join('')}
+                                                </div>
+                                              `
+                                            case 'checkbox':
+                                              return `
+                                                <div class="form-field">
+                                                  <label class="field-label">${component.label}</label>
+                                                  ${component.options?.map((option: string) => `
+                                                    <div class="checkbox-option">
+                                                      <input type="checkbox" ${Array.isArray(value) && value.includes(option) ? 'checked' : ''} disabled>
+                                                      <span>${option}</span>
+                                                    </div>
+                                                  `).join('')}
+                                                </div>
+                                              `
+                                            case 'slider':
+                                              return `
+                                                <div class="form-field">
+                                                  <label class="field-label">${component.label}</label>
+                                                  <div class="field-value">${value || component.value || 50}</div>
+                                                </div>
+                                              `
+                                            case 'date':
+                                            case 'time':
+                                            case 'url':
+                                              return `
+                                                <div class="form-field">
+                                                  <label class="field-label">${component.label}</label>
+                                                  <div class="field-value">${value || 'No value'}</div>
+                                                </div>
+                                              `
+                                            case 'rating':
+                                              const ratingValue = parseFloat(value) || 0
+                                              const fullStars = Math.floor(ratingValue)
+                                              const hasHalfStar = ratingValue % 1 !== 0
+                                              const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0)
+                                              const ratingDisplay = '★'.repeat(fullStars) + (hasHalfStar ? '⭐' : '') + '☆'.repeat(emptyStars)
+                                              return `
+                                                <div class="form-field">
+                                                  <label class="field-label">${component.label}</label>
+                                                  <div class="field-value">${ratingValue ? ratingDisplay + ' (' + ratingValue + '/5)' : 'No rating'}</div>
+                                                </div>
+                                              `
+                                            default:
+                                              return ''
+                                          }
+                                        }).join('')}
+                                      </div>
+                                    `).join('')}
+                                  </body>
+                                  </html>
+                                `
+                                submissionsWindow.document.write(html)
+                                submissionsWindow.document.close()
+                              }
+                            }}
+                            className="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1 rounded transition-colors"
+                            title="View submissions"
+                          >
+                            Submissions
+                          </button>
+                        )}
+                        <button
+                          onClick={async () => {
+                            try {
+                              const url = `${window.location.origin}/f/${form.uuid}`
+                              if (navigator.clipboard && navigator.clipboard.writeText) {
+                                await navigator.clipboard.writeText(url)
+                              } else {
+                                const textArea = document.createElement('textarea')
+                                textArea.value = url
+                                document.body.appendChild(textArea)
+                                textArea.select()
+                                document.execCommand('copy')
+                                document.body.removeChild(textArea)
+                              }
+                              setShowCopyAlert(true)
+                              setTimeout(() => setShowCopyAlert(false), 2000)
+                            } catch (error) {
+                              console.error('Failed to copy:', error)
+                              setShowCopyAlert(true)
+                              setTimeout(() => setShowCopyAlert(false), 2000)
+                            }
+                          }}
+                          className="bg-gray-700 hover:bg-gray-600 text-white text-xs px-3 py-1 rounded transition-colors"
+                          title="Copy link"
+                        >
+                          Copy
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {showCopyAlert && (
+        <div className="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 flex items-center gap-2">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          Link copied to clipboard!
+        </div>
+      )}
+
+      {showAIModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-900 rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex items-center gap-2 mb-4">
+              <Sparkles className="h-5 w-5 text-purple-400" />
+              <h3 className="text-white text-lg font-semibold">Generate Form with AI</h3>
+            </div>
+            
+            <p className="text-gray-400 text-sm mb-4">
+              Describe the form you want to create and AI will generate it for you.
+            </p>
+            
+            <textarea
+              value={aiPrompt}
+              onChange={(e) => setAiPrompt(e.target.value)}
+              placeholder="e.g., Create a contact form with name, email, subject dropdown, and message fields..."
+              className="w-full h-32 bg-gray-800 border border-gray-700 rounded-lg p-3 text-white placeholder-gray-500 resize-none focus:outline-none focus:border-purple-500"
+            />
+            
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowAIModal(false)
+                  setAiPrompt("")
+                }}
+                className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => generateFormWithAI(aiPrompt)}
+                disabled={!aiPrompt.trim() || isGenerating}
+                className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+              >
+                {isGenerating ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Generating...
+                  </>
+                ) : (
+                  'Generate'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
