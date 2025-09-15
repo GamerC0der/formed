@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter } from "@dnd-kit/core"
 import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable"
@@ -28,20 +28,24 @@ import {
   Star,
   Monitor,
   Sparkles,
+  Palette,
+  MapPin,
 } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Rating } from "@/components/ui/rating"
+import { ColorPicker } from "@/components/ui/color-picker"
+import { LocationPicker } from "@/components/ui/location-picker"
 
 interface FormComponent {
   id: string
-  type: "text" | "email" | "number" | "textarea" | "select" | "checkbox" | "radio" | "slider" | "divider" | "date" | "time" | "url" | "rating" | "iframe"
+  type: "text" | "email" | "number" | "textarea" | "select" | "checkbox" | "radio" | "slider" | "divider" | "date" | "time" | "url" | "rating" | "iframe" | "color" | "location"
   label: string
   placeholder?: string
   required?: boolean
   options?: string[]
   min?: number
   max?: number
-  value?: number
+  value?: number | string
   allowedDomains?: string[]
   comment?: string
   disallowDecimals?: boolean
@@ -49,13 +53,15 @@ interface FormComponent {
   src?: string
   width?: string
   height?: string
+  colorValue?: string
+  locationValue?: { lat: number; lng: number; address?: string }
 }
 
 interface DraggableComponent {
   id: string
   type: FormComponent["type"]
   label: string
-  icon: any
+  icon: React.ComponentType<{ size?: number; className?: string }>
 }
 
 const draggableComponents: DraggableComponent[] = [
@@ -73,6 +79,8 @@ const draggableComponents: DraggableComponent[] = [
   { id: "url", type: "url", label: "URL", icon: Link },
   { id: "rating", type: "rating", label: "Rating", icon: Star },
   { id: "iframe", type: "iframe", label: "Iframe", icon: Monitor },
+  { id: "color", type: "color", label: "Color Picker", icon: Palette },
+  { id: "location", type: "location", label: "Location", icon: MapPin },
 ]
 
 function generateUUID(): string {
@@ -115,9 +123,10 @@ function FormComponentItem({
   onEdit, 
   onDelete, 
   onMoveUp, 
-  onMoveDown, 
+  onMoveDown,
   canMoveUp, 
-  canMoveDown 
+  canMoveDown,
+  onRatingChange
 }: {
   component: FormComponent
   onEdit: (id: string) => void
@@ -126,6 +135,7 @@ function FormComponentItem({
   onMoveDown: (id: string) => void
   canMoveUp: boolean
   canMoveDown: boolean
+  onRatingChange: (id: string, value: number) => void
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useSortable({
     id: component.id,
@@ -186,7 +196,7 @@ function FormComponentItem({
         <input
           type="text"
           value={component.label}
-          onChange={(e) => onEdit(component.id)}
+          onChange={() => onEdit(component.id)}
           className="w-full bg-transparent text-white font-medium border-none outline-none"
           placeholder="Field label..."
         />
@@ -284,9 +294,9 @@ function FormComponentItem({
         )}
 
         {component.type === "radio" && (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {component.options?.map((option, index) => (
-              <div key={index} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-800/50 transition-colors">
+              <div key={index} className="flex items-center gap-3 p-3 rounded-lg border border-gray-600 hover:border-gray-500 hover:bg-gray-800/30 transition-all duration-200">
                 <div className="relative">
                   <input 
                     type="radio" 
@@ -298,7 +308,7 @@ function FormComponentItem({
                     <div className="w-2 h-2 rounded-full bg-blue-500 opacity-0"></div>
                   </div>
                 </div>
-                <span className="text-gray-300 text-sm">{option}</span>
+                <span className="text-gray-200 text-sm font-medium">{option}</span>
               </div>
             ))}
           </div>
@@ -379,17 +389,9 @@ function FormComponentItem({
         {component.type === "rating" && (
           <div className="space-y-2">
             <Rating
-              value={component.value || 0}
+              value={typeof component.value === 'number' ? component.value : 0}
               allowHalf={component.allowHalf}
-              onChange={(value) => {
-                setFormComponents(items =>
-                  items.map(item =>
-                    item.id === component.id
-                      ? { ...item, value }
-                      : item
-                  )
-                )
-              }}
+              onChange={(value) => onRatingChange(component.id, value)}
             />
             {component.comment && (
               <div className="text-xs text-gray-400 italic">
@@ -442,6 +444,36 @@ function FormComponentItem({
             )}
           </div>
         )}
+
+        {component.type === "color" && (
+          <div className="space-y-2">
+            <ColorPicker
+              value={component.colorValue || "#000000"}
+              onChange={() => {}}
+              disabled
+            />
+            {component.comment && (
+              <div className="text-xs text-gray-400 italic">
+                {component.comment}
+              </div>
+            )}
+          </div>
+        )}
+
+        {component.type === "location" && (
+          <div className="space-y-2">
+            <LocationPicker
+              value={component.locationValue}
+              onChange={() => {}}
+              disabled
+            />
+            {component.comment && (
+              <div className="text-xs text-gray-400 italic">
+                {component.comment}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
@@ -456,42 +488,40 @@ export default function FormBuilder() {
   const [isMounted, setIsMounted] = useState(false)
   const [componentSearch, setComponentSearch] = useState("")
   const [showPublishModal, setShowPublishModal] = useState(false)
-  const [publishedForms, setPublishedForms] = useState<any[]>([])
+  const [publishedForms, setPublishedForms] = useState<Array<{ uuid: string; name: string; createdAt: string; submissions?: Array<{ id: string; createdAt: string; data: Record<string, unknown> }>; content?: { formComponents?: Array<{ id: string; type: string; label: string; options?: string[] }> } }>>([])
   const [showFormsBar, setShowFormsBar] = useState(false)
+  const [publishedFormsSearch, setPublishedFormsSearch] = useState("")
   const [showAIModal, setShowAIModal] = useState(false)
   const [aiPrompt, setAiPrompt] = useState("")
   const [isGenerating, setIsGenerating] = useState(false)
   const [sessionId, setSessionId] = useState<string>('')
   const [showCopyAlert, setShowCopyAlert] = useState(false)
 
-  useEffect(() => {
-    setIsMounted(true)
-    initializeSession()
-  }, [])
-
-  const initializeSession = async () => {
-    try {
-      let storedSessionId = localStorage.getItem('formBuilderSessionId')
-      
-      if (!storedSessionId) {
-        const response = await fetch('/api/session')
-        if (response.ok) {
-          const { sessionId: newSessionId } = await response.json()
-          storedSessionId = newSessionId
-          localStorage.setItem('formBuilderSessionId', newSessionId)
-        }
-      }
-      
-      if (storedSessionId) {
-        setSessionId(storedSessionId)
-        fetchPublishedForms(storedSessionId)
-      }
-    } catch (error) {
-      console.error('Error initializing session:', error)
+  const validateDimensionValue = (value: string) => {
+    const cleanValue = value.replace(/[%pxrememvhvw]/g, '')
+    
+    if (cleanValue === '' || isNaN(Number(cleanValue))) {
+      return value
     }
+    
+    if (value.endsWith('%')) {
+      return cleanValue + '%'
+    } else if (value.endsWith('px')) {
+      return cleanValue + 'px'
+    } else if (value.endsWith('rem')) {
+      return cleanValue + 'rem'
+    } else if (value.endsWith('em')) {
+      return cleanValue + 'em'
+    } else if (value.endsWith('vh')) {
+      return cleanValue + 'vh'
+    } else if (value.endsWith('vw')) {
+      return cleanValue + 'vw'
+    }
+    
+    return cleanValue + 'px'
   }
 
-  const fetchPublishedForms = async (sessionIdToUse?: string) => {
+  const fetchPublishedForms = useCallback(async (sessionIdToUse?: string) => {
     try {
       const currentSessionId = sessionIdToUse || sessionId
       if (!currentSessionId) return
@@ -511,8 +541,41 @@ export default function FormBuilder() {
     } catch (error) {
       console.error('Error fetching forms:', error)
     }
-  }
+  }, [sessionId])
 
+  const initializeSession = useCallback(async () => {
+    try {
+      let storedSessionId = localStorage.getItem('formBuilderSessionId')
+      
+      if (!storedSessionId) {
+        const response = await fetch('/api/session')
+        if (response.ok) {
+          const { sessionId: newSessionId } = await response.json()
+          storedSessionId = newSessionId
+          localStorage.setItem('formBuilderSessionId', newSessionId)
+        }
+      }
+      
+      if (storedSessionId) {
+        setSessionId(storedSessionId)
+        fetchPublishedForms(storedSessionId)
+      }
+    } catch (error) {
+      console.error('Error initializing session:', error)
+    }
+  }, [fetchPublishedForms])
+
+  const handlePreview = useCallback(() => {
+    if (formComponents.length === 0) return
+    const data = { formName, formComponents }
+    document.cookie = `formData=${encodeURIComponent(JSON.stringify(data))}; path=/`
+    window.open('/form', '_blank')
+  }, [formComponents, formName])
+
+  useEffect(() => {
+    setIsMounted(true)
+    initializeSession()
+  }, [initializeSession])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -527,7 +590,7 @@ export default function FormBuilder() {
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [formComponents])
+  }, [formComponents, handlePreview])
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string)
@@ -611,12 +674,22 @@ export default function FormBuilder() {
     }
   }
 
+  const handleRatingChange = (id: string, value: number) => {
+    setFormComponents(items =>
+      items.map(item =>
+        item.id === id
+          ? { ...item, value }
+          : item
+      )
+    )
+  }
+
   const generateFormWithAI = async (prompt: string) => {
     setIsGenerating(true)
     try {
       const systemPrompt = `You are a form builder AI. Generate a JSON response with form components based on the user's description.
 
-Available component types: text, email, number, textarea, select, checkbox, radio, slider, divider, date, time, url, rating, iframe
+Available component types: text, email, number, textarea, select, checkbox, radio, slider, divider, date, time, url, rating, iframe, color, location
 
 Each component should have:
 - id: unique string
@@ -628,6 +701,8 @@ Each component should have:
 - min/max: numbers (for number, slider)
 - allowHalf: boolean (for rating)
 - src/width/height: strings (for iframe)
+- colorValue: string (for color)
+- locationValue: object with lat/lng/address (for location)
 
 Return only valid JSON in this format:
 {
@@ -674,7 +749,7 @@ Return only valid JSON in this format:
       const parsedResponse = JSON.parse(jsonString)
       const generatedComponents = parsedResponse.components || []
 
-      const newComponents: FormComponent[] = generatedComponents.map((comp: any) => ({
+      const newComponents: FormComponent[] = generatedComponents.map((comp: { id?: string; type: string; label?: string; placeholder?: string; required?: boolean; options?: string[]; min?: number; max?: number; allowHalf?: boolean; src?: string; width?: string; height?: string; colorValue?: string; locationValue?: { lat: number; lng: number; address?: string } }) => ({
         id: comp.id || generateUUID(),
         type: comp.type,
         label: comp.label || 'Untitled',
@@ -686,7 +761,9 @@ Return only valid JSON in this format:
         allowHalf: comp.allowHalf,
         src: comp.src,
         width: comp.width,
-        height: comp.height
+        height: comp.height,
+        colorValue: comp.colorValue,
+        locationValue: comp.locationValue
       }))
 
       setFormComponents([])
@@ -739,13 +816,6 @@ Return only valid JSON in this format:
     }
   }
 
-  const handlePreview = () => {
-    if (formComponents.length === 0) return
-    const data = { formName, formComponents }
-    document.cookie = `formData=${encodeURIComponent(JSON.stringify(data))}; path=/`
-    window.open('/form', '_blank')
-  }
-
   if (!isMounted) {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
@@ -787,19 +857,23 @@ Return only valid JSON in this format:
         onDragEnd={handleDragEnd}
       >
         <div className="flex h-[calc(100vh-80px)]">
-          <div className="w-80 bg-gray-900 border-r border-gray-700 p-4">
-            <h3 className="text-white font-semibold mb-4">Components</h3>
-            <input
-              type="text"
-              value={componentSearch}
-              onChange={(e) => setComponentSearch(e.target.value)}
-              placeholder="Search components..."
-              className="w-full bg-gray-800 text-white border border-gray-700 rounded-md px-3 py-2 mb-4 focus:outline-none focus:border-white"
-            />
-            <div className="space-y-2">
-              {filteredComponents.map((component) => (
-                <DraggableComponentItem key={component.id} component={component} />
-              ))}
+          <div className="w-80 bg-gray-900 border-r border-gray-700 flex flex-col">
+            <div className="p-4 border-b border-gray-700">
+              <h3 className="text-white font-semibold mb-4">Components</h3>
+              <input
+                type="text"
+                value={componentSearch}
+                onChange={(e) => setComponentSearch(e.target.value)}
+                placeholder="Search components..."
+                className="w-full bg-gray-800 text-white border border-gray-700 rounded-md px-3 py-2 mb-4 focus:outline-none focus:border-white"
+              />
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              <div className="space-y-2">
+                {filteredComponents.map((component) => (
+                  <DraggableComponentItem key={component.id} component={component} />
+                ))}
+              </div>
             </div>
           </div>
 
@@ -841,6 +915,7 @@ Return only valid JSON in this format:
                         onMoveDown={handleMoveDown}
                         canMoveUp={index > 0}
                         canMoveDown={index < formComponents.length - 1}
+                        onRatingChange={handleRatingChange}
                       />
                     ))
                   )}
@@ -1209,10 +1284,11 @@ Return only valid JSON in this format:
                           type="text"
                           value={selectedComponentData.width || "100%"}
                           onChange={(e) => {
+                            const validatedValue = validateDimensionValue(e.target.value)
                             setFormComponents(items =>
                               items.map(item =>
                                 item.id === selectedComponent
-                                  ? { ...item, width: e.target.value }
+                                  ? { ...item, width: validatedValue }
                                   : item
                               )
                             )
@@ -1227,10 +1303,11 @@ Return only valid JSON in this format:
                           type="text"
                           value={selectedComponentData.height || "400px"}
                           onChange={(e) => {
+                            const validatedValue = validateDimensionValue(e.target.value)
                             setFormComponents(items =>
                               items.map(item =>
                                 item.id === selectedComponent
-                                  ? { ...item, height: e.target.value }
+                                  ? { ...item, height: validatedValue }
                                   : item
                               )
                             )
@@ -1240,6 +1317,42 @@ Return only valid JSON in this format:
                         />
                       </div>
                     </div>
+                  </div>
+                )}
+
+                {selectedComponentData.type === "color" && (
+                  <div>
+                    <label className="block text-sm text-gray-300 mb-2">Default Color</label>
+                    <ColorPicker
+                      value={selectedComponentData.colorValue || "#000000"}
+                      onChange={(color) => {
+                        setFormComponents(items =>
+                          items.map(item =>
+                            item.id === selectedComponent
+                              ? { ...item, colorValue: color }
+                              : item
+                          )
+                        )
+                      }}
+                    />
+                  </div>
+                )}
+
+                {selectedComponentData.type === "location" && (
+                  <div>
+                    <label className="block text-sm text-gray-300 mb-2">Default Location</label>
+                    <LocationPicker
+                      value={selectedComponentData.locationValue}
+                      onChange={(location) => {
+                        setFormComponents(items =>
+                          items.map(item =>
+                            item.id === selectedComponent
+                              ? { ...item, locationValue: location }
+                              : item
+                          )
+                        )
+                      }}
+                    />
                   </div>
                 )}
 
@@ -1291,7 +1404,7 @@ Return only valid JSON in this format:
 
       {showPublishModal && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          className="fixed inset-0 backdrop-blur-sm bg-black/20 flex items-center justify-center z-50"
           onClick={() => setShowPublishModal(false)}
         >
           <div 
@@ -1300,7 +1413,7 @@ Return only valid JSON in this format:
           >
             <h3 className="text-white text-lg font-semibold mb-4">Publish Form</h3>
             <p className="text-gray-300 mb-6">
-              Are you sure you want to publish "{formName || 'Untitled Form'}"? 
+              Are you sure you want to publish &quot;{formName || 'Untitled Form'}&quot;? 
               This will make your form live and accessible to users.
             </p>
             <div className="flex gap-3 justify-end">
@@ -1353,11 +1466,31 @@ Return only valid JSON in this format:
         {showFormsBar && (
           <div className="max-h-48 overflow-y-auto border-t border-gray-700">
             <div className="p-4">
-              {publishedForms.length === 0 ? (
-                <p className="text-gray-400 text-sm text-center py-4">No published forms yet</p>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {publishedForms.map((form) => (
+              <div className="relative mb-4">
+                <input
+                  type="text"
+                  value={publishedFormsSearch}
+                  onChange={(e) => setPublishedFormsSearch(e.target.value)}
+                  placeholder="Search published forms..."
+                  className="w-full bg-gray-800 text-white border border-gray-700 rounded-md px-3 py-2 pl-10 focus:outline-none focus:border-white text-sm"
+                />
+                <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              {(() => {
+                const filteredForms = publishedForms.filter(form => 
+                  form.name?.toLowerCase().includes(publishedFormsSearch.toLowerCase()) ||
+                  form.uuid?.toLowerCase().includes(publishedFormsSearch.toLowerCase())
+                )
+                
+                return filteredForms.length === 0 ? (
+                  <p className="text-gray-400 text-sm text-center py-4">
+                    {publishedFormsSearch ? 'No forms found matching your search.' : 'No published forms yet'}
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {filteredForms.map((form) => (
                     <div key={form.uuid} className="bg-gray-800 rounded-lg p-3 border border-gray-700">
                       <div className="flex items-start justify-between mb-2">
                         <h4 className="text-white font-medium text-sm truncate">
@@ -1384,7 +1517,7 @@ Return only valid JSON in this format:
                             onClick={() => {
                               const submissionsWindow = window.open('', '_blank', 'width=800,height=600')
                               if (submissionsWindow) {
-                                const firstThreeSubmissions = form.submissions.slice(0, 3)
+                                const firstThreeSubmissions = form.submissions?.slice(0, 3) || []
                                 const html = `
                                   <!DOCTYPE html>
                                   <html>
@@ -1447,13 +1580,13 @@ Return only valid JSON in this format:
                                   </head>
                                   <body>
                                     <h1>Submissions for "${form.name || 'Untitled Form'}"</h1>
-                                    ${firstThreeSubmissions.map((submission: any, index: number) => `
+                                    ${firstThreeSubmissions.map((submission: { id: string; createdAt: string; data: Record<string, unknown> }, index: number) => `
                                       <div class="submission">
                                         <div class="submission-header">
                                           <div class="submission-title">Submission #${index + 1}</div>
                                           <div class="submission-date">${new Date(submission.createdAt).toLocaleString()}</div>
                                         </div>
-                                        ${form.content?.formComponents?.map((component: any) => {
+                                        ${form.content?.formComponents?.map((component: { id: string; type: string; label: string; options?: string[] }) => {
                                           const value = submission.data[component.id] || ''
                                           switch (component.type) {
                                             case 'text':
@@ -1507,7 +1640,7 @@ Return only valid JSON in this format:
                                               return `
                                                 <div class="form-field">
                                                   <label class="field-label">${component.label}</label>
-                                                  <div class="field-value">${value || component.value || 50}</div>
+                                                  <div class="field-value">${value || 50}</div>
                                                 </div>
                                               `
                                             case 'date':
@@ -1520,7 +1653,7 @@ Return only valid JSON in this format:
                                                 </div>
                                               `
                                             case 'rating':
-                                              const ratingValue = parseFloat(value) || 0
+                                              const ratingValue = parseFloat(String(value)) || 0
                                               const fullStars = Math.floor(ratingValue)
                                               const hasHalfStar = ratingValue % 1 !== 0
                                               const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0)
@@ -1529,6 +1662,27 @@ Return only valid JSON in this format:
                                                 <div class="form-field">
                                                   <label class="field-label">${component.label}</label>
                                                   <div class="field-value">${ratingValue ? ratingDisplay + ' (' + ratingValue + '/5)' : 'No rating'}</div>
+                                                </div>
+                                              `
+                                            case 'color':
+                                              return `
+                                                <div class="form-field">
+                                                  <label class="field-label">${component.label}</label>
+                                                  <div class="field-value" style="display: flex; align-items: center; gap: 8px;">
+                                                    <div style="width: 20px; height: 20px; background-color: ${value || '#000000'}; border: 1px solid #ccc; border-radius: 3px;"></div>
+                                                    <span>${value || 'No color selected'}</span>
+                                                  </div>
+                                                </div>
+                                              `
+                                            case 'location':
+                                              const locationData = typeof value === 'string' ? JSON.parse(value) : value
+                                              return `
+                                                <div class="form-field">
+                                                  <label class="field-label">${component.label}</label>
+                                                  <div class="field-value">
+                                                    ${locationData?.address ? locationData.address : 'No location selected'}
+                                                    ${locationData?.lat && locationData?.lng ? `<br><small style="color: #9ca3af;">Lat: ${locationData.lat.toFixed(6)}, Lng: ${locationData.lng.toFixed(6)}</small>` : ''}
+                                                  </div>
                                                 </div>
                                               `
                                             default:
@@ -1572,16 +1726,20 @@ Return only valid JSON in this format:
                               setTimeout(() => setShowCopyAlert(false), 2000)
                             }
                           }}
-                          className="bg-gray-700 hover:bg-gray-600 text-white text-xs px-3 py-1 rounded transition-colors"
+                          className="bg-gray-700 hover:bg-gray-600 text-white text-xs px-3 py-1 rounded transition-colors flex items-center gap-1"
                           title="Copy link"
                         >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
                           Copy
                         </button>
                       </div>
                     </div>
                   ))}
                 </div>
-              )}
+                )
+              })()}
             </div>
           </div>
         )}
@@ -1597,7 +1755,7 @@ Return only valid JSON in this format:
       )}
 
       {showAIModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 backdrop-blur-sm bg-black/20 flex items-center justify-center z-50">
           <div className="bg-gray-900 rounded-lg p-6 w-full max-w-md mx-4">
             <div className="flex items-center gap-2 mb-4">
               <Sparkles className="h-5 w-5 text-purple-400" />

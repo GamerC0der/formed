@@ -1,16 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import crypto from 'crypto'
-
-function getSessionId(request: NextRequest): string {
-  const clientIP = request.headers.get('x-forwarded-for') || 
-                  request.headers.get('x-real-ip') || 
-                  '127.0.0.1'
-  
-  const hour = Math.floor(Date.now() / (1000 * 60 * 60))
-  const sessionData = `${clientIP}-${hour}`
-  return crypto.createHash('sha256').update(sessionData).digest('hex').substring(0, 16)
-}
 
 export async function GET(request: NextRequest) {
   try {

@@ -1,36 +1,33 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Formed
 
-## Getting Started
+Forms, done right. The App is built in NextJS, and uses ShadCN + Tailwind. The app begins with a landing page hero section with a create form button and a try demo (goes to a demo form).
 
-First, run the development server:
+The create form menu enables users to drag and drop and create forms quickly. You can simply publish your form at the top right, with one click. Forms can be viewed at the bottom.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Forms Include:
+- Text Inputs
+- Number
+- Textarea
+- Select
+- Checkbox
+- Radio
+- Slider
+- Iframe
+- Ratings
+& so much more!
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+You can edit properties (such as being required) at the right properties panel. You can also previe your form to the left of the Publish button. 
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+To start your form, you can either start manually, or use AI via the Start with AI button which uses Kimi K2 to generate a form (JSON) based on your input prompt. It takes about 15s and generates great starting forms.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# Setup
 
-## Learn More
+Install: `sudo npm i`
+Run: `sudo npm run dev` or `sudo vc dev`
+Deploy: `sudo vc deploy`
 
-To learn more about Next.js, take a look at the following resources:
+Set a database url via DATABASE_URL in .env.local (MYSQL), and an admin password (example ADMIN_PASSWORD=your_password_goes_here)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# Hosted Demo
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Try the hosted demo at https://formed-three.vercel.app/. 

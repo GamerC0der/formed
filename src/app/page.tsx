@@ -2,8 +2,7 @@
 
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Plus, LogIn, Wrench } from "lucide-react"
-import confetti from "canvas-confetti"
+import { Plus } from "lucide-react"
 import { ConfettiButton } from "@/components/ui/confetti"
 
 export default function Home() {
@@ -36,13 +35,6 @@ export default function Home() {
   }, [])
 
 
-  const handleFormBuilderClick = () => {
-    router.push('/builder')
-  }
-
-  const handleLoginClick = () => {
-    router.push('/login')
-  }
 
   const handleDemoClick = () => {
     const demoData = {

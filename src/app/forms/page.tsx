@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Trash2, Search, Eye, Lock } from "lucide-react"
 
 export default function FormsPage() {
-  const [forms, setForms] = useState<any[]>([])
+  const [forms, setForms] = useState<Array<{ id: string; uuid: string; name: string; createdAt: string; content?: { formComponents?: Array<{ id: string; type: string; label: string; options?: string[] }> }; submissions?: Array<{ id: string; createdAt: string; data: Record<string, unknown> }> }>>([])
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [password, setPassword] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
@@ -24,7 +24,7 @@ export default function FormsPage() {
       } else {
         alert("Incorrect password")
       }
-    } catch (error) {
+    } catch {
       alert("Login failed")
     }
   }
@@ -41,8 +41,8 @@ export default function FormsPage() {
         const data = await response.json()
         setForms(data)
       }
-    } catch (error) {
-      console.error('Error fetching forms:', error)
+    } catch {
+      console.error('Error fetching forms')
     }
     setLoading(false)
   }
@@ -60,8 +60,8 @@ export default function FormsPage() {
       if (response.ok) {
         setForms(forms.filter(form => form.uuid !== uuid))
       }
-    } catch (error) {
-      console.error('Error deleting form:', error)
+    } catch {
+      console.error('Error deleting form')
     }
   }
 
@@ -156,14 +156,55 @@ export default function FormsPage() {
                       <div className="bg-gray-800 rounded-lg p-4 max-w-md">
                         <h4 className="text-white font-medium mb-2">Recent Submissions:</h4>
                         <div className="space-y-2 max-h-32 overflow-y-auto">
-                          {form.submissions.slice(0, 3).map((submission: any) => (
+                          {form.submissions.slice(0, 3).map((submission) => (
                             <div key={submission.id} className="text-xs text-gray-300 bg-gray-700 p-2 rounded">
                               <p>Date: {new Date(submission.createdAt).toLocaleString()}</p>
                               <details className="mt-1">
                                 <summary className="cursor-pointer text-blue-400">View Data</summary>
-                                <pre className="mt-1 text-xs overflow-x-auto">
-                                  {JSON.stringify(submission.data, null, 2)}
-                                </pre>
+                                <div className="mt-1 text-xs space-y-1">
+                                  {Object.entries(submission.data).map(([key, value]) => {
+                                    const component = form.content?.formComponents?.find((c) => c.id === key)
+                                    if (!component) return null
+                                    
+                                    if (component.type === 'color') {
+                                      return (
+                                        <div key={key} className="flex items-center gap-2">
+                                          <span className="font-medium">{component.label}:</span>
+                                          <div className="flex items-center gap-1">
+                                            <div 
+                                              className="w-4 h-4 border border-gray-500 rounded"
+                                              style={{ backgroundColor: value as string }}
+                                            />
+                                            <span>{value as string}</span>
+                                          </div>
+                                        </div>
+                                      )
+                                    }
+                                    
+                                    if (component.type === 'location') {
+                                      const locationData = typeof value === 'string' ? JSON.parse(value as string) : value
+                                      return (
+                                        <div key={key}>
+                                          <span className="font-medium">{component.label}:</span>
+                                          <div className="ml-2">
+                                            <div>{locationData?.address || 'No address'}</div>
+                                            {locationData?.lat && locationData?.lng && (
+                                              <div className="text-gray-400">
+                                                Lat: {locationData.lat.toFixed(6)}, Lng: {locationData.lng.toFixed(6)}
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      )
+                                    }
+                                    
+                                    return (
+                                      <div key={key}>
+                                        <span className="font-medium">{component.label}:</span> {String(value)}
+                                      </div>
+                                    )
+                                  })}
+                                </div>
                               </details>
                             </div>
                           ))}
